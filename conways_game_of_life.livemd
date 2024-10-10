@@ -1,0 +1,269 @@
+# Conway's Game of Life
+
+```elixir
+Mix.install([
+  {:kino, "~> 0.14.1"}
+])
+
+import IEx.Helpers
+```
+
+## Rules of CGL
+
+* GL is a game played on a grid.
+* A grid is made up of cells.
+* The number of neighbors for a cell (include above/below/left/right and corners)
+  * If a cell has fewer than 2 neighbors, it will die of loneliness
+  * If a cell has more than 3 neighbors, it will die of overcrowding
+  * If a cell has 2 neighbors, it will stay the same
+  * If a cell has 3 neighbors, conditions are appropriate and it will spring to life
+
+<!-- livebook:{"break_markdown":true} -->
+
+**CRC Pattern**:
+
+* Construct-Reduce-Convert:
+  * Construct is about getting data from the input
+  * Reduce is about converting that data using the methods of the same module
+  * Convert is about sending the output
+
+Example: CRC Counter
+
+```elixir
+defmodule Counter do
+  # creating
+  def new(string) do
+    String.to_integer(string)
+  end
+
+  # reduce
+  def add(counter, value \\ 1) do
+    counter + value
+  end
+
+  # convert
+  def show(counter) do
+    "The answer is #{counter}"
+  end
+end
+```
+
+```elixir
+input = "42"
+
+input
+|> Counter.new()
+|> Counter.add(1)
+|> Counter.add(1)
+|> Counter.add(-1)
+|> Counter.show()
+```
+
+## Plan
+
+* Cell (create: new, reduce: evolve, convert: show, data: x, y, width, alive)
+* Board (create: new, reduce: evolve, convert: show, data: witdh, height, cells)
+
+```elixir
+
+```
+
+## Cell
+
+```elixir
+defmodule Cell do
+  defstruct [x: 0, y: 0, width: 10, alive: true]
+
+  def new(opts \\ []) do
+    __struct__(opts)
+  end
+
+  def evolve(cell, neighbor_count) do
+    alive_in_next_generation =
+    cond do
+      neighbor_count < 2 -> 
+        false
+      neighbor_count > 3 ->
+        false
+      neighbor_count == 2 ->
+        cell.alive
+      neighbor_count == 3 ->
+        true
+    end
+
+    %{cell | alive: alive_in_next_generation}
+  end
+
+  def show(cell) do
+    x = cell.x * cell.width
+    y = cell.y * cell.width
+    """
+    <rect width="#{cell.width}" height="#{cell.width}" x="#{x}" y="#{y}" rx="2" ry="2" fill="#{color(cell)}" />
+    """
+  end
+
+  defp color(cell) do
+    case cell.alive do
+      true -> "green"
+      false -> "gray"
+    end
+  end
+end
+```
+
+**Checking show/1 function**
+
+```elixir
+
+box = 
+  Cell.new([x: 10, y: 10])
+  |> Cell.show()
+```
+
+Using Kino library to draw the cell:
+
+```elixir
+svg =
+  """
+  <svg width="300" height="130" xmlns="http://www.w3.org/2000/svg">
+  #{box}
+  </svg>
+  """  
+  |> Kino.Image.new(:svg)
+```
+
+**Checking evolve/1 function**
+
+<!-- livebook:{"break_markdown":true} -->
+
+An alive cell with 1 neightbor evolves to a death cell (alive == false)
+
+```elixir
+Cell.new() |> Cell.evolve(1)
+```
+
+An alive cell with 4 neightbors evolves to a death cell (alive == false)
+
+```elixir
+Cell.new() |> Cell.evolve(4)
+```
+
+An alive cell with 2 neightbors evolves keeping its state (alive == true)
+
+```elixir
+Cell.new() |> Cell.evolve(2)
+```
+
+An alive cell with 3 neighbors evolves keeping its state (alive == true)
+
+```elixir
+Cell.new() |> Cell.evolve(3)
+```
+
+A death cell with 1 neightbor evolves into a death cell (alive == false)
+
+```elixir
+Cell.new([alive: false]) |> Cell.evolve(1)
+```
+
+A death cell with 4 neightbos evolves into a death cell (alive == false)
+
+```elixir
+Cell.new([alive: false]) |> Cell.evolve(4)
+```
+
+A death cell with 2 neightbors evolves keeping its state (alive == false)
+
+```elixir
+Cell.new([alive: false]) |> Cell.evolve(2)
+```
+
+A death cell with 3 neightbors evolves to an alive cell (alive == true)
+
+```elixir
+Cell.new([alive: false]) |> Cell.evolve(3)
+```
+
+## Grid
+
+```elixir
+defmodule Grid do
+  defstruct [width: 10, height: 10, cells: %{}]
+
+  def new(width, height, live_cell_locations) do
+    cells = 
+      for x <- 0..(width-1), y <- 0..(height-1), into: %{} do
+        {{x, y}, Cell.new([x: x, y: y, alive: {x,y} in live_cell_locations])}
+      end 
+    %__MODULE__{width: width, height: height, cells: cells}
+  end
+
+  def show(grid) do
+    cells = 
+      for x <- 0..(grid.width-1), y <- 0..(grid.height-1) do
+        Cell.show(grid.cells[{x, y}])
+      end 
+
+    """
+    <svg width="#{grid.height * 10}" height="#{grid.height * 10}" xmlns="http://www.w3.org/2000/svg">
+    #{cells}
+    </svg>
+    """  
+  end
+
+  def evolve(grid) do
+    cells =
+      for x <- 0..(grid.width - 1),  y <- 0..(grid.height - 1), into: %{} do
+        cell_to_evolve = grid.cells[{x, y}]
+        new_cell = Cell.evolve(cell_to_evolve, neighbor_count(grid, cell_to_evolve))
+        {{x, y}, new_cell}
+      end
+
+    %{grid | cells: cells}
+  end
+
+  def neighbor_count(grid, cell) do
+    for x <- (cell.x - 1)..(cell.x + 1), 
+      y <- (cell.y - 1)..(cell.y + 1), {x, y} != {cell.x, cell.y} do
+      Map.get(grid.cells, {x, y}, Cell.new(alive: false))
+    end
+    |> Enum.count(&(&1.alive))
+  end
+end
+```
+
+Checking new/3 function
+
+```elixir
+grid = Grid.new(3, 3, [{0, 1}, {1, 1}, {2, 1}])
+```
+
+Checking show/1 function
+
+```elixir
+grid
+|> Grid.show()
+```
+
+Using Kino library to draw the grid:
+
+```elixir
+grid
+|> Grid.show()
+|> Kino.Image.new(:svg)
+```
+
+Checking neighbor_count/2
+
+```elixir
+Grid.neighbor_count(grid, Cell.new(x: 1, y: 1))
+```
+
+Checking evolve/2 function
+
+```elixir
+grid
+|> Grid.evolve
+|> Grid.show
+|> Kino.Image.new(:svg)
+```
