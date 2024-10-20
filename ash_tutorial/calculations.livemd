@@ -69,6 +69,9 @@ defmodule Tutorial.Accounts.User do
   end
 
   # <--- Add the calculations here
+  calculations do
+    calculate :full_name, :string, expr(first_name <> " " <> last_name)
+  end
 end
 ```
 
