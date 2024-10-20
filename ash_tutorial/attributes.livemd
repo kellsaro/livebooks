@@ -159,10 +159,20 @@ defmodule Tutorial.Support.Ticket do
 
     # Add the attributes here -->
     # - Subject
+    attribute :subject, :string, allow_nil?: false
     # - Description
+    attribute :description, :string
     # - Status
+    attribute :status, :atom do
+      constraints [one_of: [:open, :closed]]
+      default :open
+      allow_nil? :false
+    end
+    
     # - Create Timestamp
+    create_timestamp :created_at
     # - Update Timestamp
+    update_timestamp :updated_at
   end
 end
 
@@ -203,7 +213,9 @@ The output should look something like this:
 </details>
 
 ```elixir
-
+Tutorial.Support.Ticket
+|> Ash.Changeset.for_create(:create, %{})
+|> Ash.create!()
 ```
 
 Now create a Ticket with a `subject`
@@ -222,7 +234,9 @@ Now create a Ticket with a `subject`
 </details>
 
 ```elixir
-
+Tutorial.Support.Ticket
+|> Ash.Changeset.for_create(:create, %{subject: "subject one"})
+|> Ash.create!()
 ```
 
 Now create a ticket with the `status` set to `:closed`
@@ -241,7 +255,9 @@ Now create a ticket with the `status` set to `:closed`
 </details>
 
 ```elixir
-
+Tutorial.Support.Ticket
+|> Ash.Changeset.for_create(:create, %{subject: "subject two", status: :closed})
+|> Ash.create!()
 ```
 
 Now try creating a ticket with the status set to `:pending`. This should give an error because `:pending` is not a valid `status`.
@@ -260,7 +276,9 @@ Now try creating a ticket with the status set to `:pending`. This should give an
 </details>
 
 ```elixir
-
+Tutorial.Support.Ticket
+|> Ash.Changeset.for_create(:create, %{subject: "subject three", status: :pending})
+|> Ash.create!()
 ```
 
 ## Latest created Ticket
@@ -290,7 +308,10 @@ Finally call `Ash.read_one!()` on the query.
 </details>
 
 ```elixir
-
+Tutorial.Support.Ticket
+|> Ash.Query.sort(created_at: :desc)
+|> Ash.Query.limit(1)
+|> Ash.read_one!()
 ```
 
 <div class="flex items-center w-full flex-start justify-between rounded-xl p-4" style="background-color: #f0f5f9; color: #61758a;">
