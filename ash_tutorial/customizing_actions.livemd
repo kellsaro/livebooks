@@ -136,6 +136,14 @@ defmodule Tutorial.Support.Ticket do
     defaults [:read]
     
     # <-- Add the :open and :close action
+    create :open do
+      accept [:subject, :description]
+    end 
+
+    update :close do
+      accept []
+      change set_attribute(:status, :closed)
+    end
   end
 
   attributes do
@@ -211,7 +219,9 @@ This is because you set the accepted attributes to `:subject` and `:description`
 **Enter your solution**
 
 ```elixir
-
+Tutorial.Support.Ticket
+|> Ash.Changeset.for_create(:open, %{subject: "The subject", description: "the desc.", status: :closed})
+|> Ash.create!()
 ```
 
 Create a Ticket and store it in the `ticket` variable.
@@ -233,7 +243,10 @@ Create a Ticket and store it in the `ticket` variable.
 **Enter your solution**
 
 ```elixir
-
+ticket =
+  Tutorial.Support.Ticket
+  |> Ash.Changeset.for_create(:open, %{subject: "The subject", description: "The desc."})
+  |> Ash.create!()
 ```
 
 ## Close a Ticket
@@ -258,7 +271,9 @@ To update use `Ash.update!/1`.
 </details>
 
 ```elixir
-
+ticket
+|> Ash.Changeset.for_update(:close, %{})
+|> Ash.update!()
 ```
 
 <div class="flex items-center w-full flex-start justify-between rounded-xl p-4" style="background-color: #f0f5f9; color: #61758a;">
