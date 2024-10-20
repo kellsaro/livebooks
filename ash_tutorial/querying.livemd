@@ -90,7 +90,15 @@ defmodule Tutorial.Profile do
     data_layer: Ash.DataLayer.Ets
 
   actions do
-    # <--- Create your actions here
+    defaults [:read, :destroy]
+    
+    create :create do
+      accept [:name]
+    end
+    
+    update :update do
+      accept [:name]
+    end
   end
 
   attributes do
@@ -138,7 +146,13 @@ You can create a `Profile` by:
 **Enter your solution**
 
 ```elixir
+Tutorial.Profile
+|> Ash.Changeset.for_create(:create, %{name: "Joe Armstrong"})
+|> Ash.create!()
 
+Tutorial.Profile
+|> Ash.Changeset.for_create(:create, %{name: "My name"})
+|> Ash.create!()
 ```
 
 ## Reading
@@ -162,7 +176,8 @@ Call `Ash.read!/1` with the `Tutorial.Profile` module.
 **Enter your solution**
 
 ```elixir
-
+Tutorial.Profile
+|> Ash.read!()
 ```
 
 Now fetch the "Joe Armstrong" Profile.
@@ -194,7 +209,13 @@ Put the result into the `joe` variable. `Ash.read!/1` returns a list, so make su
 **Enter your solution**
 
 ```elixir
+require Ash.Query
 
+[joe] =
+  Tutorial.Profile
+  |> Ash.Query.filter(name == "Joe Armstrong")
+  |> Ash.Query.limit(1)
+  |> Ash.read!()
 ```
 
 You'll use the `joe` variable in the next sections.
@@ -229,7 +250,9 @@ Then apply the changeset by calling `Ash.update!/1` with the changeset.
 **Enter your solution**
 
 ```elixir
-
+joe
+|> Ash.Changeset.for_update(:update, %{name: "Neil Armstrong"})
+|> Ash.update!()
 ```
 
 ## Destroying
@@ -252,7 +275,8 @@ Do this using the `Ash.destroy!/1` function.
 **Enter your solution**
 
 ```elixir
-
+joe
+|> Ash.destroy!()
 ```
 
 <div class="flex items-center w-full flex-start justify-between rounded-xl p-4" style="background-color: #f0f5f9; color: #61758a;">
