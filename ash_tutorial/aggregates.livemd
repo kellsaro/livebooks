@@ -143,6 +143,11 @@ defmodule Tutorial.Support.Representative do
   end
 
   # <- Add the aggregates here
+  aggregates do
+    count :count_of_open_tickets, :tickets do
+      filter expr(status == :open)
+    end
+  end
 end
 ```
 
