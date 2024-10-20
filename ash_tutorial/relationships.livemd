@@ -66,7 +66,7 @@ defmodule Tutorial.Support.Ticket do
     defaults [:read]
 
     create :create do
-      accept [:subject, :description, :status]
+      accept [:subject, :description, :status, :representative_id]
     end
   end
 
@@ -86,6 +86,9 @@ defmodule Tutorial.Support.Ticket do
   end
 
   # <-- Add the relationship here
+  relationships do
+    belongs_to :representative, Tutorial.Support.Representative
+  end
 end
 
 defmodule Tutorial.Support.Representative do
@@ -139,7 +142,7 @@ Tutorial.Support.Ticket
 |> Ash.Changeset.for_create(:create, %{subject: "My spoon is too big!", representative_id: joe.id})
 |> Ash.create!()
 # `load!/2` loads in the representative. Try removing this line to see what changes
-|> Ash.load!([:representative])
+#|> Ash.load!([:representative])
 ```
 
 As you can see it didn't quite work. The `representative_id` is not accepted by the create action on `Tutorial.Support.Ticket`. If you add `:representative_id` to that list,
