@@ -267,3 +267,165 @@ grid
 |> Grid.to_svg
 |> Kino.Image.new(:svg)
 ```
+
+## Processes and State
+
+Sending a message to the current process:
+
+```elixir
+me = self()
+
+# Sending a message to the current process. 
+# The message will be enqueued in the Message queue of this process.
+send(me, :hi)
+
+# Shows information about this process
+self()
+|> i
+```
+
+```elixir
+# Receiving the message and processing it. In this case, processing is just returning it.
+# Evaluating this will process the message that is already in the queue.
+receive do
+  m -> m
+end
+```
+
+We could process the evolution of the Grid in a separate process.
+The idea is:
+
+* __Spawn__ a separate process which will be responsible for evolving a grid.
+* We will communicate with this process sending a message.
+
+```elixir
+defmodule GameOfLife do
+  def spawn_process(width, height, cells) do
+    grid = Grid.new(width, height, cells)
+
+    # spawn the process and returns its id
+    spawn(fn -> loop(grid) end)
+  end
+
+  @doc """
+  Send the evolve message to pid.
+  """
+  def send_evolve(pid) do
+    send(pid, :evolve)
+  end
+
+  @doc """
+  Sends the show message to pdi.
+  Receives the svg response and prints it.
+  """
+  def send_show(pid) do
+    send(pid, {:show, self()})
+
+    receive do
+      svg -> 
+        svg
+        |> Kino.Image.new(:svg)
+    end
+  end
+
+
+  # Creates an infinite loop that waits for messages to the process.
+  defp loop(grid) do
+    grid
+    |> listen()
+    |> loop()
+  end 
+
+  # Listen and process messages. Always returns a grid.
+  defp listen(grid) do
+    receive do
+      :evolve -> 
+        Grid.evolve(grid) 
+    
+      {:show, from_id} ->
+        send(from_id, Grid.to_svg(grid))
+        grid
+    end
+  end
+end
+```
+
+```elixir
+gol_pid = GameOfLife.spawn_process(3, 3, [{0, 1}, {1, 1}, {2, 1}])
+
+# Send message :evolve
+GameOfLife.send_evolve(gol_pid)
+
+```
+
+```elixir
+GameOfLife.send_show(gol_pid)
+```
+
+```elixir
+GameOfLife.send_evolve(gol_pid)
+```
+
+```elixir
+GameOfLife.send_show(gol_pid)
+```
+
+## GenServers
+
+Genserver means Generic Server. It is a generic implementation on a server, bringing standard functions and macros that can be customized for each particular case.
+
+```elixir
+defmodule LifeServer do
+  use GenServer
+
+  @impl true
+  def init({width, height, cells}) do
+    grid = Grid.new(width, height, cells)
+    {:ok, grid}
+  end
+
+  @impl true
+  @doc """
+    handle_call is the function to implement if we want to reply back 
+  """
+  def handle_call(:show, _from, grid) do
+    {:reply, Grid.to_svg(grid), grid}
+  end
+
+  @impl true
+  def handle_cast(:evolve, grid) do
+    {:noreply, Grid.evolve(grid)}
+  end
+
+  def start_link(args) do
+    GenServer.start_link(__MODULE__, args)
+  end
+
+  def evolve(pid) do
+    GenServer.cast(pid, :evolve)
+    show(pid)
+  end
+
+  def show(pid) do
+    GenServer.call(pid, :show)
+    |> Kino.Image.new(:svg)
+  end
+end
+```
+
+```elixir
+# Start the server
+{:ok, pid} = LifeServer.start_link({3, 3, [{0, 1}, {1, 1}, {2, 1}]})
+```
+
+```elixir
+LifeServer.show(pid)
+```
+
+```elixir
+LifeServer.evolve(pid)
+```
+
+## The Fly in the Ointment
+
+defmodu
